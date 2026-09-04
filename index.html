@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suivi Diète & Symptômes</title>
+  <title>Journal Diète, Symptômes & Statistiques</title>
   <style>
     :root {
       --primary: #2563eb;
       --success: #059669;
       --danger: #dc2626;
+      --recording: #e11d48;
       --bg: #f8fafc;
       --card: #ffffff;
       --border: #cbd5e1;
@@ -20,7 +21,7 @@
       padding: 14px;
       color: #0f172a;
     }
-    h1, h2 { text-align: center; margin: 6px 0 14px 0; }
+    h1, h2, h3 { text-align: center; margin: 6px 0 12px 0; }
     .card {
       background: var(--card);
       border-radius: 12px;
@@ -47,9 +48,19 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    button.voice { background: #0d9488; }
-    button.export { background: var(--success); }
-    button.danger { background: var(--danger); }
+    button.voice-btn {
+      background: #0d9488;
+      transition: background 0.2s ease;
+    }
+    button.voice-btn.recording {
+      background: var(--recording);
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.65; }
+      100% { opacity: 1; }
+    }
     .preview-img {
       max-width: 100%;
       max-height: 200px;
@@ -71,6 +82,19 @@
     .badge-meal { background: #dbeafe; color: #1e40af; }
     .badge-symptom { background: #fee2e2; color: #991b1b; }
     .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; }
+
+    /* Barre statistiques */
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .filter-tabs button { margin-top: 0; background: #e2e8f0; color: #334155; font-size: 13px; }
+    .filter-tabs button.active { background: var(--primary); color: white; }
+    .stat-bar-container { margin: 10px 0; }
+    .stat-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+    .progress-bg { background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 6px; width: 0%; transition: width 0.4s ease; }
+    .fill-prot { background: #3b82f6; }
+    .fill-carb { background: #f59e0b; }
+    .fill-vit  { background: #10b981; }
+    .stat-summary { font-size: 13px; line-height: 1.5; color: #475569; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -80,20 +104,23 @@
   <!-- 1. Formulaire Repas -->
   <div class="card">
     <h2>🍽️ Noter un repas</h2>
-    <label for="mealPhoto">Photo du plat (compressée auto) :</label>
-    <input type="file" id="mealPhoto" accept="image/*" capture="environment">
-    <img id="photoPreview" class="preview-img" alt="Aperçu">
+    <label for="mealPhoto">Photo (Pellicule ou Prise directe) :</label>
+    <!-- Sans capture="environment" pour laisser le choix entre appareil photo et galerie -->
+    <input type="file" id="mealPhoto" accept="image/*">
+    <img id="photoPreview" class="preview-img" alt="Aperçu repas">
 
-    <label for="mealDesc">Description / Ingrédients :</label>
-    <textarea id="mealDesc" rows="3" placeholder="Ex: Saumon, riz basmati, brocolis..."></textarea>
-    <button type="button" class="voice" onclick="startVoice('mealDesc')">🎤 Dicter le repas</button>
+    <label for="mealDesc">Description ou dictée du repas :</label>
+    <textarea id="mealDesc" rows="3" placeholder="Ex: Saumon grillé, riz complet, haricots verts..."></textarea>
+    <button type="button" id="btnVoiceMeal" class="voice-btn" onclick="toggleVoice('mealDesc', 'btnVoiceMeal')">
+      🎤 Commencer la dictée
+    </button>
     <button type="button" onclick="saveMeal()">Enregistrer le repas</button>
   </div>
 
   <!-- 2. Formulaire Symptôme -->
   <div class="card">
     <h2>⚠️ Noter un symptôme</h2>
-    <label for="symptomDelay">Délai ressenti :</label>
+    <label for="symptomDelay">Délai après le dernier repas :</label>
     <select id="symptomDelay">
       <option value="Immédiat (< 30 min)">Immédiat (< 30 min)</option>
       <option value="2 heures après">2 heures après</option>
@@ -102,19 +129,46 @@
     </select>
 
     <label for="symptomDesc">Symptômes ressentis :</label>
-    <textarea id="symptomDesc" rows="2" placeholder="Ex: Gonflement abdominal, reflux acide..."></textarea>
-    <button type="button" class="voice" onclick="startVoice('symptomDesc')">🎤 Dicter le symptôme</button>
-    <button type="button" class="danger" onclick="saveSymptom()">Enregistrer le symptôme</button>
+    <textarea id="symptomDesc" rows="2" placeholder="Ex: Ballonnements, nausée, crampes..."></textarea>
+    <button type="button" id="btnVoiceSymptom" class="voice-btn" onclick="toggleVoice('symptomDesc', 'btnVoiceSymptom')">
+      🎤 Commencer la dictée
+    </button>
+    <button type="button" style="background: var(--danger);" onclick="saveSymptom()">Enregistrer le symptôme</button>
   </div>
 
-  <!-- 3. Exportation et Partage WhatsApp / Email -->
+  <!-- 3. Statistiques & Cumuls -->
+  <div class="card">
+    <h2>📊 Tendances & Macro-répartition</h2>
+    <div class="filter-tabs">
+      <button type="button" id="tab-day" class="active" onclick="switchStatsPeriod('day')">Aujourd'hui</button>
+      <button type="button" id="tab-week" onclick="switchStatsPeriod('week')">7 jours</button>
+      <button type="button" id="tab-month" onclick="switchStatsPeriod('month')">30 jours</button>
+    </div>
+
+    <div class="stat-bar-container">
+      <div class="stat-label"><span>Protéines (viandes, poissons, tofu...)</span><span id="protVal">0 repas</span></div>
+      <div class="progress-bg"><div id="protBar" class="progress-fill fill-prot"></div></div>
+    </div>
+    <div class="stat-bar-container">
+      <div class="stat-label"><span>Carbohydrates (riz, pain, pâtes, sucre...)</span><span id="carbVal">0 repas</span></div>
+      <div class="progress-bg"><div id="carbBar" class="progress-fill fill-carb"></div></div>
+    </div>
+    <div class="stat-bar-container">
+      <div class="stat-label"><span>Vitamines & Fibres (légumes, fruits...)</span><span id="vitVal">0 repas</span></div>
+      <div class="progress-bg"><div id="vitBar" class="progress-fill fill-vit"></div></div>
+    </div>
+
+    <div id="statSummary" class="stat-summary">Analyse en cours...</div>
+  </div>
+
+  <!-- 4. Export / Partage -->
   <div class="card">
     <h2>📤 Exporter & Partager</h2>
-    <button type="button" class="export" onclick="exportData('csv')">📊 Partager CSV (sans photos) via WhatsApp / Email</button>
-    <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager Rapport visuel (avec photos)</button>
+    <button type="button" style="background: var(--success);" onclick="exportData('csv')">📊 Partager le CSV (sans photos)</button>
+    <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager le Rapport complet (avec photos)</button>
   </div>
 
-  <!-- 4. Historique -->
+  <!-- 5. Historique -->
   <div class="card">
     <h2>Historique des entrées</h2>
     <div style="overflow-x:auto;">
@@ -135,7 +189,7 @@
 
   <script>
     /* ==========================================================
-       GESTION DE LA BASE INDEXEDDB (Stockage volumineux et pérenne)
+       BASE DE DONNÉES INDEXEDDB
        ========================================================== */
     const DB_NAME = 'DietLogDB';
     const DB_VERSION = 1;
@@ -175,7 +229,6 @@
         const store = tx.objectStore(STORE_NAME);
         const req = store.getAll();
         req.onsuccess = () => {
-          // Tri par date décroissante (plus récent d'abord)
           const results = req.result.sort((a, b) => b.id - a.id);
           resolve(results);
         };
@@ -184,7 +237,72 @@
     }
 
     /* ==========================================================
-       COMPRESSION DES PHOTOS (Évite de saturer la mémoire)
+       GESTION PRÉCISE DU MICROPHONE (START / STOP)
+       ========================================================== */
+    let recognition = null;
+    let activeVoiceTarget = null;
+    let activeVoiceBtn = null;
+
+    function toggleVoice(targetId, btnId) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("La reconnaissance vocale n'est pas supportée sur ce navigateur.");
+        return;
+      }
+
+      const btn = document.getElementById(btnId);
+
+      // Si déjà en cours d'écoute sur ce bouton : stopper
+      if (recognition && activeVoiceBtn === btn) {
+        recognition.stop();
+        return;
+      }
+
+      // Si une autre écoute tournait ailleurs : couper l'ancienne
+      if (recognition) {
+        recognition.stop();
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = 'fr-FR';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        activeVoiceTarget = document.getElementById(targetId);
+        activeVoiceBtn = btn;
+        btn.classList.add('recording');
+        btn.innerText = "⏹️ Arrêter l'écoute (Micro actif)";
+      };
+
+      recognition.onresult = (evt) => {
+        let transcript = "";
+        for (let i = evt.resultIndex; i < evt.results.length; ++i) {
+          transcript += evt.results[i][0].transcript;
+        }
+        if (activeVoiceTarget) {
+          activeVoiceTarget.value = (activeVoiceTarget.value ? activeVoiceTarget.value + " " : "") + transcript;
+        }
+      };
+
+      recognition.onerror = () => resetVoiceState();
+      recognition.onend = () => resetVoiceState();
+
+      recognition.start();
+    }
+
+    function resetVoiceState() {
+      if (activeVoiceBtn) {
+        activeVoiceBtn.classList.remove('recording');
+        activeVoiceBtn.innerText = "🎤 Commencer la dictée";
+      }
+      recognition = null;
+      activeVoiceTarget = null;
+      activeVoiceBtn = null;
+    }
+
+    /* ==========================================================
+       COMPRESSION DES PHOTOS (Stockage optimisé)
        ========================================================== */
     let compressedPhotoBase64 = "";
 
@@ -196,7 +314,7 @@
       reader.onload = function(event) {
         const img = new Image();
         img.onload = function() {
-          const maxDim = 800; // 800px suffisent largement
+          const maxDim = 800;
           let w = img.width;
           let h = img.height;
           if (w > h && w > maxDim) {
@@ -211,8 +329,8 @@
           canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          compressedPhotoBase64 = canvas.toDataURL('image/jpeg', 0.75); // compression JPEG 75%
-          
+          compressedPhotoBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
           const preview = document.getElementById('photoPreview');
           preview.src = compressedPhotoBase64;
           preview.style.display = 'block';
@@ -223,74 +341,127 @@
     });
 
     /* ==========================================================
-       RECONNAISSANCE VOCALE NATIVE
-       ========================================================== */
-    function startVoice(targetId) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("La reconnaissance vocale n'est pas disponible sur ce navigateur.");
-        return;
-      }
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'fr-FR';
-      recognition.interimResults = false;
-      recognition.onresult = (evt) => {
-        const text = evt.results[0][0].transcript;
-        const input = document.getElementById(targetId);
-        input.value = (input.value ? input.value + " " : "") + text;
-      };
-      recognition.start();
-    }
-
-    /* ==========================================================
-       SAUVEGARDE ET AFFICHAGE
+       ENREGISTREMENT ET ACTUALISATION
        ========================================================== */
     async function saveMeal() {
       const desc = document.getElementById('mealDesc').value.trim();
       if (!desc && !compressedPhotoBase64) {
-        alert("Ajoutez au moins une photo ou un descriptif.");
+        alert("Ajoutez au moins une photo ou une description.");
         return;
       }
+      if (recognition) recognition.stop();
+
       const entry = {
         id: Date.now(),
+        timestamp: Date.now(),
         type: 'Repas',
         date: new Date().toLocaleString('fr-FR'),
         desc: desc,
         photo: compressedPhotoBase64,
         delay: ''
       };
+
       await addEntryToDB(entry);
       document.getElementById('mealDesc').value = '';
       document.getElementById('mealPhoto').value = '';
       document.getElementById('photoPreview').style.display = 'none';
       compressedPhotoBase64 = '';
-      refreshTable();
+      refreshView();
     }
 
     async function saveSymptom() {
       const desc = document.getElementById('symptomDesc').value.trim();
       const delay = document.getElementById('symptomDelay').value;
       if (!desc) {
-        alert("Décrivez le symptôme.");
+        alert("Décrivez le symptôme ressenti.");
         return;
       }
+      if (recognition) recognition.stop();
+
       const entry = {
         id: Date.now(),
+        timestamp: Date.now(),
         type: 'Symptôme',
         date: new Date().toLocaleString('fr-FR'),
         desc: desc,
         photo: '',
         delay: delay
       };
+
       await addEntryToDB(entry);
       document.getElementById('symptomDesc').value = '';
-      refreshTable();
+      refreshView();
     }
 
-    async function refreshTable() {
+    /* ==========================================================
+       MOTEUR D'ANALYSE STATISTIQUE DES ALIMENTS
+       ========================================================== */
+    let currentPeriod = 'day';
+
+    function switchStatsPeriod(period) {
+      currentPeriod = period;
+      document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${period}`).classList.add('active');
+      computeStats();
+    }
+
+    // Listes de détection heuristique
+    const DICT = {
+      prot: ['poulet', 'dinde', 'boeuf', 'viande', 'steak', 'porc', 'jambon', 'saumon', 'thon', 'poisson', 'crevette', 'oeuf', 'oeufs', 'tofu', 'lentilles', 'pois chiches', 'fromage', 'skyr', 'whey'],
+      carb: ['riz', 'pate', 'pates', 'pain', 'pomme de terre', 'patate', 'avoine', 'quinoa', 'sucre', 'gateau', 'chocolat', 'farine', 'semoule', 'pizza', 'burger', 'frites'],
+      vit:  ['salade', 'brocoli', 'carotte', 'courgette', 'tomate', 'épinard', 'epinard', 'haricot', 'haricots', 'pomme', 'banane', 'fruit', 'fruits', 'orange', 'avocat', 'légume', 'legumes', 'chou']
+    };
+
+    async function computeStats() {
+      const entries = await getAllEntriesFromDB();
+      const now = Date.now();
+      let limitMs = 24 * 60 * 60 * 1000; // jour par défaut
+
+      if (currentPeriod === 'week') limitMs = 7 * 24 * 60 * 60 * 1000;
+      if (currentPeriod === 'month') limitMs = 30 * 24 * 60 * 60 * 1000;
+
+      const filteredMeals = entries.filter(e => e.type === 'Repas' && (now - e.timestamp) <= limitMs);
+      const filteredSymptoms = entries.filter(e => e.type === 'Symptôme' && (now - e.timestamp) <= limitMs);
+
+      let pCount = 0, cCount = 0, vCount = 0;
+
+      filteredMeals.forEach(m => {
+        const text = (m.desc || '').toLowerCase();
+        if (DICT.prot.some(k => text.includes(k))) pCount++;
+        if (DICT.carb.some(k => text.includes(k))) cCount++;
+        if (DICT.vit.some(k => text.includes(k))) vCount++;
+      });
+
+      const totalMeals = filteredMeals.length;
+      const getPercent = (count) => totalMeals === 0 ? 0 : Math.min(100, Math.round((count / totalMeals) * 100));
+
+      document.getElementById('protVal').innerText = `${pCount} repas (${getPercent(pCount)}%)`;
+      document.getElementById('carbVal').innerText = `${cCount} repas (${getPercent(cCount)}%)`;
+      document.getElementById('vitVal').innerText = `${vCount} repas (${getPercent(vCount)}%)`;
+
+      document.getElementById('protBar').style.width = `${getPercent(pCount)}%`;
+      document.getElementById('carbBar').style.width = `${getPercent(cCount)}%`;
+      document.getElementById('vitBar').style.width = `${getPercent(vCount)}%`;
+
+      const summaryDiv = document.getElementById('statSummary');
+      if (totalMeals === 0) {
+        summaryDiv.innerText = "Aucun repas enregistré sur cette période.";
+      } else {
+        summaryDiv.innerHTML = `
+          <strong>Sur cette période :</strong> ${totalMeals} repas et ${filteredSymptoms.length} symptôme(s) relevé(s).<br>
+          <em>Note d'interprétation :</em> Répartition basée sur la détection des groupes d'aliments cités (hors pesée exacte). Une fréquence élevée de glucides ou protéines couplée à l'apparition de symptômes permet d'identifier les combinaisons critiques.
+        `;
+      }
+    }
+
+    /* ==========================================================
+       AFFICHAGE DU TABLEAU & RENDU
+       ========================================================== */
+    async function refreshView() {
       const entries = await getAllEntriesFromDB();
       const tbody = document.getElementById('logTableBody');
       tbody.innerHTML = '';
+
       entries.forEach(item => {
         const tr = document.createElement('tr');
         const isMeal = item.type === 'Repas';
@@ -307,23 +478,24 @@
         `;
         tbody.appendChild(tr);
       });
+
+      computeStats();
     }
 
     /* ==========================================================
-       PARTAGE & EXPORTATION (WhatsApp, Mail, Fichiers)
+       EXPORTATION ET PARTAGE NATIVE
        ========================================================== */
     async function exportData(format) {
       const entries = await getAllEntriesFromDB();
       if (entries.length === 0) {
-        alert("Aucune donnée à exporter.");
+        alert("Aucune donnée disponible pour l'export.");
         return;
       }
 
       let file, filename;
 
       if (format === 'csv') {
-        // Encodage CSV lisible par Excel (avec BOM UTF-8)
-        let csvContent = "\uFEFFDate;Type;Description / Aliments;Délai symptôme\n";
+        let csvContent = "\uFEFFDate;Type;Description;Délai symptôme\n";
         entries.forEach(e => {
           const cleanDesc = (e.desc || '').replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, ' ');
           csvContent += `"${e.date}";"${e.type}";"${cleanDesc}";"${e.delay || ''}"\n`;
@@ -331,7 +503,6 @@
         filename = `journal_diete_${Date.now()}.csv`;
         file = new File([csvContent], filename, { type: 'text/csv;charset=utf-8;' });
       } else {
-        // Export HTML complet contenant toutes les images en haute lisibilité
         let htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rapport Diète</title><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:8px;} img{max-width:120px;border-radius:6px;}</style></head><body><h2>Rapport Repas & Symptômes</h2><table><tr><th>Date</th><th>Type</th><th>Détails</th><th>Photo / Délai</th></tr>`;
         entries.forEach(e => {
           const photoOrDelay = e.photo ? `<img src="${e.photo}">` : (e.delay || '-');
@@ -342,19 +513,17 @@
         file = new File([htmlContent], filename, { type: 'text/html;charset=utf-8;' });
       }
 
-      // Utilisation du menu natif du téléphone pour envoyer sur WhatsApp / Mail
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
-            title: 'Mon journal diète',
-            text: 'Voici mon journal des repas et symptômes.',
+            title: 'Mon journal diète & symptômes',
+            text: 'Voici l\'historique exporté de mes repas et symptômes.',
             files: [file]
           });
         } catch (err) {
-          if (err.name !== 'AbortError') alert("Erreur de partage : " + err.message);
+          if (err.name !== 'AbortError') alert("Erreur lors du partage : " + err.message);
         }
       } else {
-        // Fallback téléchargement direct si le navigateur ne gère pas le partage de fichiers
         const a = document.createElement('a');
         a.href = URL.createObjectURL(file);
         a.download = filename;
@@ -364,15 +533,15 @@
     }
 
     async function clearAllData() {
-      if (confirm("Voulez-vous vraiment effacer TOUTES vos données ?")) {
+      if (confirm("Supprimer l'ensemble des données enregistrées ?")) {
         const tx = db.transaction([STORE_NAME], 'readwrite');
         tx.objectStore(STORE_NAME).clear();
-        tx.oncomplete = () => refreshTable();
+        tx.oncomplete = () => refreshView();
       }
     }
 
-    // Démarrage
-    initDB().then(() => refreshTable());
+    // Initialisation au chargement
+    initDB().then(() => refreshView());
   </script>
 </body>
 </html>
