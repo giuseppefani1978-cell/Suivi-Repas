@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi Diète & Symptômes</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --success: #059669;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #cbd5e1;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      padding: 14px;
+      color: #0f172a;
+    }
+    h1, h2 { text-align: center; margin: 6px 0 14px 0; }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    label { font-weight: 600; display: block; margin-top: 8px; font-size: 14px; }
+    input, textarea, select, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button.voice { background: #0d9488; }
+    button.export { background: var(--success); }
+    button.danger { background: var(--danger); }
+    .preview-img {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      margin-top: 8px;
+      display: none;
+      object-fit: cover;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+    th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
+    th { background: #f1f5f9; }
+    .badge {
+      display: inline-block;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .badge-meal { background: #dbeafe; color: #1e40af; }
+    .badge-symptom { background: #fee2e2; color: #991b1b; }
+    .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <h1>🥗 Journal Diète & Symptômes</h1>
+
+  <!-- 1. Formulaire Repas -->
+  <div class="card">
+    <h2>🍽️ Noter un repas</h2>
+    <label for="mealPhoto">Photo du plat (compressée auto) :</label>
+    <input type="file" id="mealPhoto" accept="image/*" capture="environment">
+    <img id="photoPreview" class="preview-img" alt="Aperçu">
+
+    <label for="mealDesc">Description / Ingrédients :</label>
+    <textarea id="mealDesc" rows="3" placeholder="Ex: Saumon, riz basmati, brocolis..."></textarea>
+    <button type="button" class="voice" onclick="startVoice('mealDesc')">🎤 Dicter le repas</button>
+    <button type="button" onclick="saveMeal()">Enregistrer le repas</button>
+  </div>
+
+  <!-- 2. Formulaire Symptôme -->
+  <div class="card">
+    <h2>⚠️ Noter un symptôme</h2>
+    <label for="symptomDelay">Délai ressenti :</label>
+    <select id="symptomDelay">
+      <option value="Immédiat (< 30 min)">Immédiat (< 30 min)</option>
+      <option value="2 heures après">2 heures après</option>
+      <option value="4 heures après">4 heures après</option>
+      <option value="Le lendemain">Le lendemain</option>
+    </select>
+
+    <label for="symptomDesc">Symptômes ressentis :</label>
+    <textarea id="symptomDesc" rows="2" placeholder="Ex: Gonflement abdominal, reflux acide..."></textarea>
+    <button type="button" class="voice" onclick="startVoice('symptomDesc')">🎤 Dicter le symptôme</button>
+    <button type="button" class="danger" onclick="saveSymptom()">Enregistrer le symptôme</button>
+  </div>
+
+  <!-- 3. Exportation et Partage WhatsApp / Email -->
+  <div class="card">
+    <h2>📤 Exporter & Partager</h2>
+    <button type="button" class="export" onclick="exportData('csv')">📊 Partager CSV (sans photos) via WhatsApp / Email</button>
+    <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager Rapport visuel (avec photos)</button>
+  </div>
+
+  <!-- 4. Historique -->
+  <div class="card">
+    <h2>Historique des entrées</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date & Heure</th>
+            <th>Type</th>
+            <th>Détails</th>
+            <th>Photo / Délai</th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody"></tbody>
+      </table>
+    </div>
+    <button type="button" style="background:#64748b; font-size:12px; margin-top:12px;" onclick="clearAllData()">Effacer toutes les données</button>
+  </div>
+
+  <script>
+    /* ==========================================================
+       GESTION DE LA BASE INDEXEDDB (Stockage volumineux et pérenne)
+       ========================================================== */
+    const DB_NAME = 'DietLogDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'entries';
+    let db;
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const database = e.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => {
+          db = e.target.result;
+          resolve(db);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    function addEntryToDB(entry) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.add(entry);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function getAllEntriesFromDB() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          // Tri par date décroissante (plus récent d'abord)
+          const results = req.result.sort((a, b) => b.id - a.id);
+          resolve(results);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    /* ==========================================================
+       COMPRESSION DES PHOTOS (Évite de saturer la mémoire)
+       ========================================================== */
+    let compressedPhotoBase64 = "";
+
+    document.getElementById('mealPhoto').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const maxDim = 800; // 800px suffisent largement
+          let w = img.width;
+          let h = img.height;
+          if (w > h && w > maxDim) {
+            h = (h * maxDim) / w;
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = (w * maxDim) / h;
+            h = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          compressedPhotoBase64 = canvas.toDataURL('image/jpeg', 0.75); // compression JPEG 75%
+          
+          const preview = document.getElementById('photoPreview');
+          preview.src = compressedPhotoBase64;
+          preview.style.display = 'block';
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    /* ==========================================================
+       RECONNAISSANCE VOCALE NATIVE
+       ========================================================== */
+    function startVoice(targetId) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("La reconnaissance vocale n'est pas disponible sur ce navigateur.");
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'fr-FR';
+      recognition.interimResults = false;
+      recognition.onresult = (evt) => {
+        const text = evt.results[0][0].transcript;
+        const input = document.getElementById(targetId);
+        input.value = (input.value ? input.value + " " : "") + text;
+      };
+      recognition.start();
+    }
+
+    /* ==========================================================
+       SAUVEGARDE ET AFFICHAGE
+       ========================================================== */
+    async function saveMeal() {
+      const desc = document.getElementById('mealDesc').value.trim();
+      if (!desc && !compressedPhotoBase64) {
+        alert("Ajoutez au moins une photo ou un descriptif.");
+        return;
+      }
+      const entry = {
+        id: Date.now(),
+        type: 'Repas',
+        date: new Date().toLocaleString('fr-FR'),
+        desc: desc,
+        photo: compressedPhotoBase64,
+        delay: ''
+      };
+      await addEntryToDB(entry);
+      document.getElementById('mealDesc').value = '';
+      document.getElementById('mealPhoto').value = '';
+      document.getElementById('photoPreview').style.display = 'none';
+      compressedPhotoBase64 = '';
+      refreshTable();
+    }
+
+    async function saveSymptom() {
+      const desc = document.getElementById('symptomDesc').value.trim();
+      const delay = document.getElementById('symptomDelay').value;
+      if (!desc) {
+        alert("Décrivez le symptôme.");
+        return;
+      }
+      const entry = {
+        id: Date.now(),
+        type: 'Symptôme',
+        date: new Date().toLocaleString('fr-FR'),
+        desc: desc,
+        photo: '',
+        delay: delay
+      };
+      await addEntryToDB(entry);
+      document.getElementById('symptomDesc').value = '';
+      refreshTable();
+    }
+
+    async function refreshTable() {
+      const entries = await getAllEntriesFromDB();
+      const tbody = document.getElementById('logTableBody');
+      tbody.innerHTML = '';
+      entries.forEach(item => {
+        const tr = document.createElement('tr');
+        const isMeal = item.type === 'Repas';
+        const badge = `<span class="badge ${isMeal ? 'badge-meal' : 'badge-symptom'}">${item.type}</span>`;
+        const extra = isMeal && item.photo 
+          ? `<img src="${item.photo}" class="thumb" alt="plat">` 
+          : (item.delay || '-');
+
+        tr.innerHTML = `
+          <td>${item.date}</td>
+          <td>${badge}</td>
+          <td>${item.desc || '-'}</td>
+          <td>${extra}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* ==========================================================
+       PARTAGE & EXPORTATION (WhatsApp, Mail, Fichiers)
+       ========================================================== */
+    async function exportData(format) {
+      const entries = await getAllEntriesFromDB();
+      if (entries.length === 0) {
+        alert("Aucune donnée à exporter.");
+        return;
+      }
+
+      let file, filename;
+
+      if (format === 'csv') {
+        // Encodage CSV lisible par Excel (avec BOM UTF-8)
+        let csvContent = "\uFEFFDate;Type;Description / Aliments;Délai symptôme\n";
+        entries.forEach(e => {
+          const cleanDesc = (e.desc || '').replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, ' ');
+          csvContent += `"${e.date}";"${e.type}";"${cleanDesc}";"${e.delay || ''}"\n`;
+        });
+        filename = `journal_diete_${Date.now()}.csv`;
+        file = new File([csvContent], filename, { type: 'text/csv;charset=utf-8;' });
+      } else {
+        // Export HTML complet contenant toutes les images en haute lisibilité
+        let htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rapport Diète</title><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:8px;} img{max-width:120px;border-radius:6px;}</style></head><body><h2>Rapport Repas & Symptômes</h2><table><tr><th>Date</th><th>Type</th><th>Détails</th><th>Photo / Délai</th></tr>`;
+        entries.forEach(e => {
+          const photoOrDelay = e.photo ? `<img src="${e.photo}">` : (e.delay || '-');
+          htmlContent += `<tr><td>${e.date}</td><td>${e.type}</td><td>${e.desc}</td><td>${photoOrDelay}</td></tr>`;
+        });
+        htmlContent += `</table></body></html>`;
+        filename = `rapport_diete_complet_${Date.now()}.html`;
+        file = new File([htmlContent], filename, { type: 'text/html;charset=utf-8;' });
+      }
+
+      // Utilisation du menu natif du téléphone pour envoyer sur WhatsApp / Mail
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: 'Mon journal diète',
+            text: 'Voici mon journal des repas et symptômes.',
+            files: [file]
+          });
+        } catch (err) {
+          if (err.name !== 'AbortError') alert("Erreur de partage : " + err.message);
+        }
+      } else {
+        // Fallback téléchargement direct si le navigateur ne gère pas le partage de fichiers
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(file);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+    }
+
+    async function clearAllData() {
+      if (confirm("Voulez-vous vraiment effacer TOUTES vos données ?")) {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        tx.objectStore(STORE_NAME).clear();
+        tx.oncomplete = () => refreshTable();
+      }
+    }
+
+    // Démarrage
+    initDB().then(() => refreshTable());
+  </script>
+</body>
+</html>
