@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Journal Diète, Symptômes & Fréquence Aliments</title>
+  <title>Journal Diète & Symptômes</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -34,7 +34,7 @@
     input, textarea, select, button {
       width: 100%;
       box-sizing: border-box;
-      padding: 11px;
+      padding: 10px;
       margin-top: 5px;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -60,13 +60,12 @@
     }
     .preview-img {
       max-width: 100%;
-      max-height: 200px;
+      max-height: 180px;
       border-radius: 8px;
       margin-top: 8px;
       display: none;
       object-fit: cover;
     }
-    /* Tags d'aliments */
     .tags-container {
       display: flex;
       flex-wrap: wrap;
@@ -90,30 +89,27 @@
       color: #ef4444;
       font-weight: bold;
     }
-    /* Onglets de filtrage */
     .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
     .filter-tabs button { margin-top: 0; background: #e2e8f0; color: #334155; font-size: 13px; }
     .filter-tabs button.active { background: var(--primary); color: white; }
 
-    /* Liste de fréquence des aliments */
     .freq-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       gap: 8px;
       margin-top: 10px;
     }
     .freq-card {
       background: #f1f5f9;
-      padding: 10px;
+      padding: 8px;
       border-radius: 8px;
       text-align: center;
       border: 1px solid var(--border);
     }
-    .freq-name { font-weight: 600; font-size: 14px; text-transform: capitalize; }
-    .freq-count { font-size: 18px; font-weight: 800; color: var(--primary); margin-top: 4px; }
+    .freq-name { font-weight: 600; font-size: 13px; text-transform: capitalize; }
+    .freq-count { font-size: 16px; font-weight: 800; color: var(--primary); margin-top: 2px; }
 
-    /* Barres macronutriments */
-    .stat-bar-container { margin: 10px 0; }
+    .stat-bar-container { margin: 8px 0; }
     .stat-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
     .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 4px; }
     .progress-fill { height: 100%; border-radius: 5px; width: 0%; transition: width 0.4s ease; }
@@ -134,36 +130,57 @@
     .badge-meal { background: #dbeafe; color: #1e40af; }
     .badge-symptom { background: #fee2e2; color: #991b1b; }
     .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; }
+    .action-btn {
+      padding: 5px 8px;
+      font-size: 12px;
+      margin: 2px 0;
+      border-radius: 4px;
+      width: auto;
+      display: inline-block;
+    }
+    .btn-edit { background: #0284c7; }
+    .btn-del { background: var(--danger); }
   </style>
 </head>
 <body>
 
-  <h1>🥗 Journal Diète & Fréquences</h1>
+  <h1>🥗 Journal Diète & Symptômes</h1>
 
   <!-- 1. Formulaire Repas -->
-  <div class="card">
-    <h2>🍽️ Noter un repas</h2>
+  <div class="card" id="cardMeal">
+    <h2 id="mealFormTitle">🍽️ Noter un repas</h2>
+    <input type="hidden" id="editingMealId" value="">
+
+    <label for="mealDateTime">Date et heure du repas :</label>
+    <input type="datetime-local" id="mealDateTime">
+
     <label for="mealPhoto">Photo (Pellicule ou Prise directe) :</label>
     <input type="file" id="mealPhoto" accept="image/*">
     <img id="photoPreview" class="preview-img" alt="Aperçu">
 
-    <label for="mealDesc">Description ou dictée du repas :</label>
-    <textarea id="mealDesc" rows="2" placeholder="Ex: Café, poulet grillé avec pommes de terre et salade..."></textarea>
+    <label for="mealDesc">Description ou dictée vocale :</label>
+    <textarea id="mealDesc" rows="2" placeholder="Ex: Café, poulet grillé, riz complet, salade..."></textarea>
     <button type="button" id="btnVoiceMeal" class="voice-btn" onclick="toggleVoice('mealDesc', 'btnVoiceMeal')">
       🎤 Commencer la dictée
     </button>
 
-    <label>Aliments identifiés (tags enregistrés) :</label>
+    <label>Aliments taggués :</label>
     <div id="mealTags" class="tags-container"></div>
-    <input type="text" id="manualTagInput" placeholder="+ Ajouter un aliment manuellement (ex: café) puis Entrée">
+    <input type="text" id="manualTagInput" placeholder="+ Ajouter un tag manuellement (Entrée pour valider)">
 
-    <button type="button" onclick="saveMeal()">Enregistrer le repas</button>
+    <button type="button" id="btnSaveMeal" onclick="saveMeal()">Enregistrer le repas</button>
+    <button type="button" id="btnCancelMeal" style="background:#64748b; display:none;" onclick="cancelEdit('meal')">Annuler la modification</button>
   </div>
 
   <!-- 2. Formulaire Symptôme -->
-  <div class="card">
-    <h2>⚠️ Noter un symptôme</h2>
-    <label for="symptomDelay">Délai après le dernier repas :</label>
+  <div class="card" id="cardSymptom">
+    <h2 id="symptomFormTitle">⚠️ Noter un symptôme</h2>
+    <input type="hidden" id="editingSymptomId" value="">
+
+    <label for="symptomDateTime">Date et heure d'apparition :</label>
+    <input type="datetime-local" id="symptomDateTime">
+
+    <label for="symptomDelay">Délai estimé après le repas :</label>
     <select id="symptomDelay">
       <option value="Immédiat (< 30 min)">Immédiat (< 30 min)</option>
       <option value="2 heures après">2 heures après</option>
@@ -172,14 +189,15 @@
     </select>
 
     <label for="symptomDesc">Symptômes ressentis :</label>
-    <textarea id="symptomDesc" rows="2" placeholder="Ex: Douleurs à l'estomac, crampes..."></textarea>
+    <textarea id="symptomDesc" rows="2" placeholder="Ex: Ballonnement intense, aigreurs..."></textarea>
     <button type="button" id="btnVoiceSymptom" class="voice-btn" onclick="toggleVoice('symptomDesc', 'btnVoiceSymptom')">
       🎤 Commencer la dictée
     </button>
-    <button type="button" style="background: var(--danger);" onclick="saveSymptom()">Enregistrer le symptôme</button>
+    <button type="button" id="btnSaveSymptom" style="background: var(--danger);" onclick="saveSymptom()">Enregistrer le symptôme</button>
+    <button type="button" id="btnCancelSymptom" style="background:#64748b; display:none;" onclick="cancelEdit('symptom')">Annuler la modification</button>
   </div>
 
-  <!-- 3. Statistiques & Cumuls d'aliments -->
+  <!-- 3. Statistiques & Fréquences -->
   <div class="card">
     <h2>📊 Cumul des aliments consommés</h2>
     <div class="filter-tabs">
@@ -188,13 +206,11 @@
       <button type="button" id="tab-month" onclick="switchStatsPeriod('month')">30 jours</button>
     </div>
 
-    <!-- Grille de cumul des aliments récurrents -->
-    <label>Fréquence détaillée des aliments :</label>
+    <label>Fréquence détaillée :</label>
     <div id="freqGrid" class="freq-grid"></div>
 
-    <!-- Répartition par groupes -->
-    <div style="margin-top: 18px;">
-      <label>Répartition indicative des groupes :</label>
+    <div style="margin-top: 14px;">
+      <label>Groupes alimentaires :</label>
       <div class="stat-bar-container">
         <div class="stat-label"><span>Protéines</span><span id="protVal">0</span></div>
         <div class="progress-bg"><div id="protBar" class="progress-fill fill-prot"></div></div>
@@ -213,21 +229,22 @@
   <!-- 4. Export / Partage -->
   <div class="card">
     <h2>📤 Exporter & Partager</h2>
-    <button type="button" style="background: var(--success);" onclick="exportData('csv')">📊 Partager CSV (Fréquences & Historique)</button>
+    <button type="button" style="background: var(--success);" onclick="exportData('csv')">📊 Partager CSV (WhatsApp / Email)</button>
     <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager Rapport complet (avec photos)</button>
   </div>
 
-  <!-- 5. Historique -->
+  <!-- 5. Historique avec édition directe -->
   <div class="card">
     <h2>Historique</h2>
     <div style="overflow-x:auto;">
       <table>
         <thead>
           <tr>
-            <th>Date</th>
+            <th>Date / Heure</th>
             <th>Type</th>
             <th>Détails & Tags</th>
             <th>Photo / Délai</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="logTableBody"></tbody>
@@ -238,8 +255,24 @@
 
   <script>
     /* ==========================================================
-       BASE DE DONNÉES INDEXEDDB
+       INITIALISATION DATES & INDEXEDDB
        ========================================================== */
+    function formatToInputDateTime(dateObj) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const y = dateObj.getFullYear();
+      const m = pad(dateObj.getMonth() + 1);
+      const d = pad(dateObj.getDate());
+      const h = pad(dateObj.getHours());
+      const min = pad(dateObj.getMinutes());
+      return `${y}-${m}-${d}T${h}:${min}`;
+    }
+
+    function resetDatePickers() {
+      const nowStr = formatToInputDateTime(new Date());
+      document.getElementById('mealDateTime').value = nowStr;
+      document.getElementById('symptomDateTime').value = nowStr;
+    }
+
     const DB_NAME = 'DietLogDB';
     const DB_VERSION = 1;
     const STORE_NAME = 'entries';
@@ -262,13 +295,33 @@
       });
     }
 
-    function addEntryToDB(entry) {
+    function putEntryToDB(entry) {
       return new Promise((resolve, reject) => {
         const tx = db.transaction([STORE_NAME], 'readwrite');
         const store = tx.objectStore(STORE_NAME);
-        store.add(entry);
+        store.put(entry);
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function deleteEntryFromDB(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function getEntryFromDB(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
       });
     }
 
@@ -278,7 +331,8 @@
         const store = tx.objectStore(STORE_NAME);
         const req = store.getAll();
         req.onsuccess = () => {
-          const results = req.result.sort((a, b) => b.id - a.id);
+          // Tri chronologique inverse sur le timestamp de l'événement (et non la date de création)
+          const results = req.result.sort((a, b) => b.timestamp - a.timestamp);
           resolve(results);
         };
         req.onerror = () => reject(req.error);
@@ -286,22 +340,19 @@
     }
 
     /* ==========================================================
-       EXTRACTION & PARSING AUTOMATIQUE D'ALIMENTS (TAGGING)
+       GESTION DES TAGS & PARSING
        ========================================================== */
     let currentTags = [];
     const STOP_WORDS = new Set([
       'un','une','des','du','de','la','le','les','au','aux','avec','sans','et','en','pour',
       'sur','dans','petit','grand','gros','morceau','plat','mange','manger','pris','assiette'
     ]);
-
-    // Dictionnaire d'aliments composés fréquents à repérer en priorité
     const COMPOUND_FOODS = ['pommes de terre', 'pomme de terre', 'haricots verts', 'riz basmati', 'pain complet', 'blanc de poulet', 'the vert'];
 
     function parseTextToTags(text) {
       let clean = text.toLowerCase().replace(/[.,;!?()]/g, ' ');
       const detected = [];
 
-      // 1. Extraire aliments composés
       COMPOUND_FOODS.forEach(compound => {
         if (clean.includes(compound)) {
           detected.push(compound);
@@ -309,7 +360,6 @@
         }
       });
 
-      // 2. Extraire mots simples restants
       const words = clean.split(/\s+/);
       words.forEach(w => {
         if (w.length > 2 && !STOP_WORDS.has(w) && !detected.includes(w)) {
@@ -354,7 +404,7 @@
     });
 
     /* ==========================================================
-       GESTION DU MICROPHONE (START / STOP CLAIR)
+       GESTION DU MICROPHONE
        ========================================================== */
     let recognition = null;
     let activeVoiceTarget = null;
@@ -363,17 +413,14 @@
     function toggleVoice(targetId, btnId) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("La dictée vocale n'est pas supportée par ce navigateur.");
+        alert("La reconnaissance vocale n'est pas supportée sur ce navigateur.");
         return;
       }
-
       const btn = document.getElementById(btnId);
-
       if (recognition && activeVoiceBtn === btn) {
         recognition.stop();
         return;
       }
-
       if (recognition) recognition.stop();
 
       recognition = new SpeechRecognition();
@@ -385,7 +432,7 @@
         activeVoiceTarget = document.getElementById(targetId);
         activeVoiceBtn = btn;
         btn.classList.add('recording');
-        btn.innerText = "⏹️ Arrêter l'écoute (Micro actif)";
+        btn.innerText = "⏹️ Arrêter l'écoute (Actif)";
       };
 
       recognition.onresult = (evt) => {
@@ -404,7 +451,6 @@
 
       recognition.onerror = () => resetVoiceState();
       recognition.onend = () => resetVoiceState();
-
       recognition.start();
     }
 
@@ -458,64 +504,138 @@
     });
 
     /* ==========================================================
-       ENREGISTREMENT REPAS & SYMPTÔMES
+       SAUVEGARDE & ÉDITION D'ENTRÉE
        ========================================================== */
     async function saveMeal() {
       const desc = document.getElementById('mealDesc').value.trim();
+      const dtVal = document.getElementById('mealDateTime').value;
+
       if (!desc && !compressedPhotoBase64 && currentTags.length === 0) {
         alert("Ajoutez au moins une photo, une description ou un tag.");
         return;
       }
       if (recognition) recognition.stop();
 
+      const chosenDate = dtVal ? new Date(dtVal) : new Date();
+      const editingId = document.getElementById('editingMealId').value;
+      const id = editingId ? parseInt(editingId, 10) : Date.now();
+
       const entry = {
-        id: Date.now(),
-        timestamp: Date.now(),
+        id: id,
+        timestamp: chosenDate.getTime(),
         type: 'Repas',
-        date: new Date().toLocaleString('fr-FR'),
+        date: chosenDate.toLocaleString('fr-FR'),
         desc: desc,
         tags: [...currentTags],
         photo: compressedPhotoBase64,
         delay: ''
       };
 
-      await addEntryToDB(entry);
-      document.getElementById('mealDesc').value = '';
-      document.getElementById('mealPhoto').value = '';
-      document.getElementById('photoPreview').style.display = 'none';
-      compressedPhotoBase64 = '';
-      currentTags = [];
-      updateTagsDisplay();
+      await putEntryToDB(entry);
+      cancelEdit('meal');
       refreshView();
     }
 
     async function saveSymptom() {
       const desc = document.getElementById('symptomDesc').value.trim();
       const delay = document.getElementById('symptomDelay').value;
+      const dtVal = document.getElementById('symptomDateTime').value;
+
       if (!desc) {
         alert("Décrivez le symptôme ressenti.");
         return;
       }
       if (recognition) recognition.stop();
 
+      const chosenDate = dtVal ? new Date(dtVal) : new Date();
+      const editingId = document.getElementById('editingSymptomId').value;
+      const id = editingId ? parseInt(editingId, 10) : Date.now();
+
       const entry = {
-        id: Date.now(),
-        timestamp: Date.now(),
+        id: id,
+        timestamp: chosenDate.getTime(),
         type: 'Symptôme',
-        date: new Date().toLocaleString('fr-FR'),
+        date: chosenDate.toLocaleString('fr-FR'),
         desc: desc,
         tags: [],
         photo: '',
         delay: delay
       };
 
-      await addEntryToDB(entry);
-      document.getElementById('symptomDesc').value = '';
+      await putEntryToDB(entry);
+      cancelEdit('symptom');
       refreshView();
     }
 
+    async function startEdit(id) {
+      const entry = await getEntryFromDB(id);
+      if (!entry) return;
+
+      const dateObj = new Date(entry.timestamp);
+
+      if (entry.type === 'Repas') {
+        document.getElementById('editingMealId').value = entry.id;
+        document.getElementById('mealDateTime').value = formatToInputDateTime(dateObj);
+        document.getElementById('mealDesc').value = entry.desc || '';
+        currentTags = entry.tags || [];
+        updateTagsDisplay();
+
+        if (entry.photo) {
+          compressedPhotoBase64 = entry.photo;
+          const preview = document.getElementById('photoPreview');
+          preview.src = entry.photo;
+          preview.style.display = 'block';
+        }
+
+        document.getElementById('mealFormTitle').innerText = "✏️ Modifier le repas";
+        document.getElementById('btnSaveMeal').innerText = "Mettre à jour le repas";
+        document.getElementById('btnCancelMeal').style.display = 'block';
+        document.getElementById('cardMeal').scrollIntoView({ behavior: 'smooth' });
+      } else {
+        document.getElementById('editingSymptomId').value = entry.id;
+        document.getElementById('symptomDateTime').value = formatToInputDateTime(dateObj);
+        document.getElementById('symptomDesc').value = entry.desc || '';
+        document.getElementById('symptomDelay').value = entry.delay || 'Immédiat (< 30 min)';
+
+        document.getElementById('symptomFormTitle').innerText = "✏️ Modifier le symptôme";
+        document.getElementById('btnSaveSymptom').innerText = "Mettre à jour le symptôme";
+        document.getElementById('btnCancelSymptom').style.display = 'block';
+        document.getElementById('cardSymptom').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function cancelEdit(type) {
+      if (type === 'meal') {
+        document.getElementById('editingMealId').value = '';
+        document.getElementById('mealDesc').value = '';
+        document.getElementById('mealPhoto').value = '';
+        document.getElementById('photoPreview').style.display = 'none';
+        compressedPhotoBase64 = '';
+        currentTags = [];
+        updateTagsDisplay();
+        document.getElementById('mealFormTitle').innerText = "🍽️ Noter un repas";
+        document.getElementById('btnSaveMeal').innerText = "Enregistrer le repas";
+        document.getElementById('btnCancelMeal').style.display = 'none';
+        document.getElementById('mealDateTime').value = formatToInputDateTime(new Date());
+      } else {
+        document.getElementById('editingSymptomId').value = '';
+        document.getElementById('symptomDesc').value = '';
+        document.getElementById('symptomFormTitle').innerText = "⚠️ Noter un symptôme";
+        document.getElementById('btnSaveSymptom').innerText = "Enregistrer le symptôme";
+        document.getElementById('btnCancelSymptom').style.display = 'none';
+        document.getElementById('symptomDateTime').value = formatToInputDateTime(new Date());
+      }
+    }
+
+    async function deleteEntry(id) {
+      if (confirm("Supprimer définitivement cette entrée ?")) {
+        await deleteEntryFromDB(id);
+        refreshView();
+      }
+    }
+
     /* ==========================================================
-       CALCUL DES CUMULS & STATISTIQUES PAR PÉRIODE
+       STATISTIQUES & GROUPES
        ========================================================== */
     let currentPeriod = 'day';
 
@@ -542,7 +662,6 @@
 
       const filteredMeals = entries.filter(e => e.type === 'Repas' && (now - e.timestamp) <= limitMs);
 
-      // Compter la fréquence de chaque aliment
       const freqMap = {};
       let protCount = 0, carbCount = 0, vitCount = 0;
 
@@ -550,21 +669,18 @@
         const mealTags = meal.tags || [];
         mealTags.forEach(t => {
           freqMap[t] = (freqMap[t] || 0) + 1;
-
           if (GROUPS.prot.some(k => t.includes(k))) protCount++;
           if (GROUPS.carb.some(k => t.includes(k))) carbCount++;
           if (GROUPS.vit.some(k => t.includes(k))) vitCount++;
         });
       });
 
-      // Afficher les aliments les plus fréquents sous forme de cartes
       const grid = document.getElementById('freqGrid');
       grid.innerHTML = '';
-
       const sortedFoods = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
 
       if (sortedFoods.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; color: #64748b; font-size:13px;">Aucun aliment enregistré sur cette période.</div>';
+        grid.innerHTML = '<div style="grid-column: 1/-1; color: #64748b; font-size:13px;">Aucun aliment sur cette période.</div>';
       } else {
         sortedFoods.forEach(([food, count]) => {
           const div = document.createElement('div');
@@ -574,7 +690,6 @@
         });
       }
 
-      // Barres de répartition indicative
       const totalGroups = protCount + carbCount + vitCount;
       const getPct = (c) => totalGroups === 0 ? 0 : Math.round((c / totalGroups) * 100);
 
@@ -588,7 +703,7 @@
     }
 
     /* ==========================================================
-       RENDU DU TABLEAU HISTORIQUE
+       RENDU DU TABLEAU
        ========================================================== */
     async function refreshView() {
       const entries = await getAllEntriesFromDB();
@@ -614,6 +729,10 @@
           <td>${badge}</td>
           <td>${detailsHtml}</td>
           <td>${extra}</td>
+          <td>
+            <button type="button" class="action-btn btn-edit" onclick="startEdit(${item.id})">✏️</button>
+            <button type="button" class="action-btn btn-del" onclick="deleteEntry(${item.id})">🗑️</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -622,12 +741,12 @@
     }
 
     /* ==========================================================
-       EXPORTATION ET PARTAGE
+       EXPORTATIONS
        ========================================================== */
     async function exportData(format) {
       const entries = await getAllEntriesFromDB();
       if (entries.length === 0) {
-        alert("Aucune donnée à exporter.");
+        alert("Aucune donnée disponible pour l'export.");
         return;
       }
 
@@ -662,7 +781,7 @@
             files: [file]
           });
         } catch (err) {
-          if (err.name !== 'AbortError') alert("Erreur : " + err.message);
+          if (err.name !== 'AbortError') alert("Erreur de partage : " + err.message);
         }
       } else {
         const a = document.createElement('a');
@@ -677,10 +796,15 @@
       if (confirm("Supprimer l'intégralité des données ?")) {
         const tx = db.transaction([STORE_NAME], 'readwrite');
         tx.objectStore(STORE_NAME).clear();
-        tx.oncomplete = () => refreshView();
+        tx.oncomplete = () => {
+          cancelEdit('meal');
+          cancelEdit('symptom');
+          refreshView();
+        };
       }
     }
 
+    resetDatePickers();
     initDB().then(() => refreshView());
   </script>
 </body>
