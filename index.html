@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Journal Diète, Symptômes & Statistiques</title>
+  <title>Journal Diète, Symptômes & Fréquence Aliments</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -21,7 +21,7 @@
       padding: 14px;
       color: #0f172a;
     }
-    h1, h2, h3 { text-align: center; margin: 6px 0 12px 0; }
+    h1, h2 { text-align: center; margin: 6px 0 12px 0; }
     .card {
       background: var(--card);
       border-radius: 12px;
@@ -48,10 +48,7 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    button.voice-btn {
-      background: #0d9488;
-      transition: background 0.2s ease;
-    }
+    button.voice-btn { background: #0d9488; }
     button.voice-btn.recording {
       background: var(--recording);
       animation: pulse 1.2s infinite;
@@ -69,6 +66,61 @@
       display: none;
       object-fit: cover;
     }
+    /* Tags d'aliments */
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      min-height: 28px;
+    }
+    .tag {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tag .remove-btn {
+      cursor: pointer;
+      color: #ef4444;
+      font-weight: bold;
+    }
+    /* Onglets de filtrage */
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .filter-tabs button { margin-top: 0; background: #e2e8f0; color: #334155; font-size: 13px; }
+    .filter-tabs button.active { background: var(--primary); color: white; }
+
+    /* Liste de fréquence des aliments */
+    .freq-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .freq-card {
+      background: #f1f5f9;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .freq-name { font-weight: 600; font-size: 14px; text-transform: capitalize; }
+    .freq-count { font-size: 18px; font-weight: 800; color: var(--primary); margin-top: 4px; }
+
+    /* Barres macronutriments */
+    .stat-bar-container { margin: 10px 0; }
+    .stat-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 5px; width: 0%; transition: width 0.4s ease; }
+    .fill-prot { background: #3b82f6; }
+    .fill-carb { background: #f59e0b; }
+    .fill-vit  { background: #10b981; }
+
     table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
     th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
     th { background: #f1f5f9; }
@@ -82,38 +134,29 @@
     .badge-meal { background: #dbeafe; color: #1e40af; }
     .badge-symptom { background: #fee2e2; color: #991b1b; }
     .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 4px; }
-
-    /* Barre statistiques */
-    .filter-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-    .filter-tabs button { margin-top: 0; background: #e2e8f0; color: #334155; font-size: 13px; }
-    .filter-tabs button.active { background: var(--primary); color: white; }
-    .stat-bar-container { margin: 10px 0; }
-    .stat-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
-    .progress-bg { background: #e2e8f0; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 4px; }
-    .progress-fill { height: 100%; border-radius: 6px; width: 0%; transition: width 0.4s ease; }
-    .fill-prot { background: #3b82f6; }
-    .fill-carb { background: #f59e0b; }
-    .fill-vit  { background: #10b981; }
-    .stat-summary { font-size: 13px; line-height: 1.5; color: #475569; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <h1>🥗 Journal Diète & Symptômes</h1>
+  <h1>🥗 Journal Diète & Fréquences</h1>
 
   <!-- 1. Formulaire Repas -->
   <div class="card">
     <h2>🍽️ Noter un repas</h2>
     <label for="mealPhoto">Photo (Pellicule ou Prise directe) :</label>
-    <!-- Sans capture="environment" pour laisser le choix entre appareil photo et galerie -->
     <input type="file" id="mealPhoto" accept="image/*">
-    <img id="photoPreview" class="preview-img" alt="Aperçu repas">
+    <img id="photoPreview" class="preview-img" alt="Aperçu">
 
     <label for="mealDesc">Description ou dictée du repas :</label>
-    <textarea id="mealDesc" rows="3" placeholder="Ex: Saumon grillé, riz complet, haricots verts..."></textarea>
+    <textarea id="mealDesc" rows="2" placeholder="Ex: Café, poulet grillé avec pommes de terre et salade..."></textarea>
     <button type="button" id="btnVoiceMeal" class="voice-btn" onclick="toggleVoice('mealDesc', 'btnVoiceMeal')">
       🎤 Commencer la dictée
     </button>
+
+    <label>Aliments identifiés (tags enregistrés) :</label>
+    <div id="mealTags" class="tags-container"></div>
+    <input type="text" id="manualTagInput" placeholder="+ Ajouter un aliment manuellement (ex: café) puis Entrée">
+
     <button type="button" onclick="saveMeal()">Enregistrer le repas</button>
   </div>
 
@@ -129,55 +172,61 @@
     </select>
 
     <label for="symptomDesc">Symptômes ressentis :</label>
-    <textarea id="symptomDesc" rows="2" placeholder="Ex: Ballonnements, nausée, crampes..."></textarea>
+    <textarea id="symptomDesc" rows="2" placeholder="Ex: Douleurs à l'estomac, crampes..."></textarea>
     <button type="button" id="btnVoiceSymptom" class="voice-btn" onclick="toggleVoice('symptomDesc', 'btnVoiceSymptom')">
       🎤 Commencer la dictée
     </button>
     <button type="button" style="background: var(--danger);" onclick="saveSymptom()">Enregistrer le symptôme</button>
   </div>
 
-  <!-- 3. Statistiques & Cumuls -->
+  <!-- 3. Statistiques & Cumuls d'aliments -->
   <div class="card">
-    <h2>📊 Tendances & Macro-répartition</h2>
+    <h2>📊 Cumul des aliments consommés</h2>
     <div class="filter-tabs">
       <button type="button" id="tab-day" class="active" onclick="switchStatsPeriod('day')">Aujourd'hui</button>
       <button type="button" id="tab-week" onclick="switchStatsPeriod('week')">7 jours</button>
       <button type="button" id="tab-month" onclick="switchStatsPeriod('month')">30 jours</button>
     </div>
 
-    <div class="stat-bar-container">
-      <div class="stat-label"><span>Protéines (viandes, poissons, tofu...)</span><span id="protVal">0 repas</span></div>
-      <div class="progress-bg"><div id="protBar" class="progress-fill fill-prot"></div></div>
-    </div>
-    <div class="stat-bar-container">
-      <div class="stat-label"><span>Carbohydrates (riz, pain, pâtes, sucre...)</span><span id="carbVal">0 repas</span></div>
-      <div class="progress-bg"><div id="carbBar" class="progress-fill fill-carb"></div></div>
-    </div>
-    <div class="stat-bar-container">
-      <div class="stat-label"><span>Vitamines & Fibres (légumes, fruits...)</span><span id="vitVal">0 repas</span></div>
-      <div class="progress-bg"><div id="vitBar" class="progress-fill fill-vit"></div></div>
-    </div>
+    <!-- Grille de cumul des aliments récurrents -->
+    <label>Fréquence détaillée des aliments :</label>
+    <div id="freqGrid" class="freq-grid"></div>
 
-    <div id="statSummary" class="stat-summary">Analyse en cours...</div>
+    <!-- Répartition par groupes -->
+    <div style="margin-top: 18px;">
+      <label>Répartition indicative des groupes :</label>
+      <div class="stat-bar-container">
+        <div class="stat-label"><span>Protéines</span><span id="protVal">0</span></div>
+        <div class="progress-bg"><div id="protBar" class="progress-fill fill-prot"></div></div>
+      </div>
+      <div class="stat-bar-container">
+        <div class="stat-label"><span>Glucides / Féculents</span><span id="carbVal">0</span></div>
+        <div class="progress-bg"><div id="carbBar" class="progress-fill fill-carb"></div></div>
+      </div>
+      <div class="stat-bar-container">
+        <div class="stat-label"><span>Vitamines / Légumes / Fruits</span><span id="vitVal">0</span></div>
+        <div class="progress-bg"><div id="vitBar" class="progress-fill fill-vit"></div></div>
+      </div>
+    </div>
   </div>
 
   <!-- 4. Export / Partage -->
   <div class="card">
     <h2>📤 Exporter & Partager</h2>
-    <button type="button" style="background: var(--success);" onclick="exportData('csv')">📊 Partager le CSV (sans photos)</button>
-    <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager le Rapport complet (avec photos)</button>
+    <button type="button" style="background: var(--success);" onclick="exportData('csv')">📊 Partager CSV (Fréquences & Historique)</button>
+    <button type="button" style="background: #4338ca;" onclick="exportData('html')">🖼️ Partager Rapport complet (avec photos)</button>
   </div>
 
   <!-- 5. Historique -->
   <div class="card">
-    <h2>Historique des entrées</h2>
+    <h2>Historique</h2>
     <div style="overflow-x:auto;">
       <table>
         <thead>
           <tr>
-            <th>Date & Heure</th>
+            <th>Date</th>
             <th>Type</th>
-            <th>Détails</th>
+            <th>Détails & Tags</th>
             <th>Photo / Délai</th>
           </tr>
         </thead>
@@ -237,7 +286,75 @@
     }
 
     /* ==========================================================
-       GESTION PRÉCISE DU MICROPHONE (START / STOP)
+       EXTRACTION & PARSING AUTOMATIQUE D'ALIMENTS (TAGGING)
+       ========================================================== */
+    let currentTags = [];
+    const STOP_WORDS = new Set([
+      'un','une','des','du','de','la','le','les','au','aux','avec','sans','et','en','pour',
+      'sur','dans','petit','grand','gros','morceau','plat','mange','manger','pris','assiette'
+    ]);
+
+    // Dictionnaire d'aliments composés fréquents à repérer en priorité
+    const COMPOUND_FOODS = ['pommes de terre', 'pomme de terre', 'haricots verts', 'riz basmati', 'pain complet', 'blanc de poulet', 'the vert'];
+
+    function parseTextToTags(text) {
+      let clean = text.toLowerCase().replace(/[.,;!?()]/g, ' ');
+      const detected = [];
+
+      // 1. Extraire aliments composés
+      COMPOUND_FOODS.forEach(compound => {
+        if (clean.includes(compound)) {
+          detected.push(compound);
+          clean = clean.replace(new RegExp(compound, 'g'), '');
+        }
+      });
+
+      // 2. Extraire mots simples restants
+      const words = clean.split(/\s+/);
+      words.forEach(w => {
+        if (w.length > 2 && !STOP_WORDS.has(w) && !detected.includes(w)) {
+          detected.push(w);
+        }
+      });
+
+      return detected;
+    }
+
+    function updateTagsDisplay() {
+      const container = document.getElementById('mealTags');
+      container.innerHTML = '';
+      currentTags.forEach((tag, index) => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.innerHTML = `${tag} <span class="remove-btn" onclick="removeTag(${index})">&times;</span>`;
+        container.appendChild(span);
+      });
+    }
+
+    function removeTag(index) {
+      currentTags.splice(index, 1);
+      updateTagsDisplay();
+    }
+
+    document.getElementById('mealDesc').addEventListener('input', (e) => {
+      currentTags = parseTextToTags(e.target.value);
+      updateTagsDisplay();
+    });
+
+    document.getElementById('manualTagInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = e.target.value.trim().toLowerCase();
+        if (val && !currentTags.includes(val)) {
+          currentTags.push(val);
+          updateTagsDisplay();
+          e.target.value = '';
+        }
+      }
+    });
+
+    /* ==========================================================
+       GESTION DU MICROPHONE (START / STOP CLAIR)
        ========================================================== */
     let recognition = null;
     let activeVoiceTarget = null;
@@ -246,22 +363,18 @@
     function toggleVoice(targetId, btnId) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        alert("La reconnaissance vocale n'est pas supportée sur ce navigateur.");
+        alert("La dictée vocale n'est pas supportée par ce navigateur.");
         return;
       }
 
       const btn = document.getElementById(btnId);
 
-      // Si déjà en cours d'écoute sur ce bouton : stopper
       if (recognition && activeVoiceBtn === btn) {
         recognition.stop();
         return;
       }
 
-      // Si une autre écoute tournait ailleurs : couper l'ancienne
-      if (recognition) {
-        recognition.stop();
-      }
+      if (recognition) recognition.stop();
 
       recognition = new SpeechRecognition();
       recognition.lang = 'fr-FR';
@@ -282,6 +395,10 @@
         }
         if (activeVoiceTarget) {
           activeVoiceTarget.value = (activeVoiceTarget.value ? activeVoiceTarget.value + " " : "") + transcript;
+          if (targetId === 'mealDesc') {
+            currentTags = parseTextToTags(activeVoiceTarget.value);
+            updateTagsDisplay();
+          }
         }
       };
 
@@ -302,7 +419,7 @@
     }
 
     /* ==========================================================
-       COMPRESSION DES PHOTOS (Stockage optimisé)
+       COMPRESSION PHOTO
        ========================================================== */
     let compressedPhotoBase64 = "";
 
@@ -341,12 +458,12 @@
     });
 
     /* ==========================================================
-       ENREGISTREMENT ET ACTUALISATION
+       ENREGISTREMENT REPAS & SYMPTÔMES
        ========================================================== */
     async function saveMeal() {
       const desc = document.getElementById('mealDesc').value.trim();
-      if (!desc && !compressedPhotoBase64) {
-        alert("Ajoutez au moins une photo ou une description.");
+      if (!desc && !compressedPhotoBase64 && currentTags.length === 0) {
+        alert("Ajoutez au moins une photo, une description ou un tag.");
         return;
       }
       if (recognition) recognition.stop();
@@ -357,6 +474,7 @@
         type: 'Repas',
         date: new Date().toLocaleString('fr-FR'),
         desc: desc,
+        tags: [...currentTags],
         photo: compressedPhotoBase64,
         delay: ''
       };
@@ -366,6 +484,8 @@
       document.getElementById('mealPhoto').value = '';
       document.getElementById('photoPreview').style.display = 'none';
       compressedPhotoBase64 = '';
+      currentTags = [];
+      updateTagsDisplay();
       refreshView();
     }
 
@@ -384,6 +504,7 @@
         type: 'Symptôme',
         date: new Date().toLocaleString('fr-FR'),
         desc: desc,
+        tags: [],
         photo: '',
         delay: delay
       };
@@ -394,7 +515,7 @@
     }
 
     /* ==========================================================
-       MOTEUR D'ANALYSE STATISTIQUE DES ALIMENTS
+       CALCUL DES CUMULS & STATISTIQUES PAR PÉRIODE
        ========================================================== */
     let currentPeriod = 'day';
 
@@ -402,60 +523,72 @@
       currentPeriod = period;
       document.querySelectorAll('.filter-tabs button').forEach(b => b.classList.remove('active'));
       document.getElementById(`tab-${period}`).classList.add('active');
-      computeStats();
+      computeDetailedStats();
     }
 
-    // Listes de détection heuristique
-    const DICT = {
-      prot: ['poulet', 'dinde', 'boeuf', 'viande', 'steak', 'porc', 'jambon', 'saumon', 'thon', 'poisson', 'crevette', 'oeuf', 'oeufs', 'tofu', 'lentilles', 'pois chiches', 'fromage', 'skyr', 'whey'],
-      carb: ['riz', 'pate', 'pates', 'pain', 'pomme de terre', 'patate', 'avoine', 'quinoa', 'sucre', 'gateau', 'chocolat', 'farine', 'semoule', 'pizza', 'burger', 'frites'],
-      vit:  ['salade', 'brocoli', 'carotte', 'courgette', 'tomate', 'épinard', 'epinard', 'haricot', 'haricots', 'pomme', 'banane', 'fruit', 'fruits', 'orange', 'avocat', 'légume', 'legumes', 'chou']
+    const GROUPS = {
+      prot: ['poulet', 'boeuf', 'steak', 'saumon', 'thon', 'poisson', 'porc', 'jambon', 'oeuf', 'oeufs', 'tofu', 'lentilles', 'pois chiches', 'fromage', 'skyr', 'dinde'],
+      carb: ['riz', 'pates', 'pate', 'pain', 'pommes de terre', 'pomme de terre', 'patate', 'avoine', 'quinoa', 'sucre', 'gateau', 'chocolat', 'croissant'],
+      vit:  ['salade', 'brocoli', 'carotte', 'courgette', 'tomate', 'haricots verts', 'pomme', 'banane', 'fruit', 'legume', 'avocat', 'orange']
     };
 
-    async function computeStats() {
+    async function computeDetailedStats() {
       const entries = await getAllEntriesFromDB();
       const now = Date.now();
-      let limitMs = 24 * 60 * 60 * 1000; // jour par défaut
+      let limitMs = 24 * 60 * 60 * 1000;
 
       if (currentPeriod === 'week') limitMs = 7 * 24 * 60 * 60 * 1000;
       if (currentPeriod === 'month') limitMs = 30 * 24 * 60 * 60 * 1000;
 
       const filteredMeals = entries.filter(e => e.type === 'Repas' && (now - e.timestamp) <= limitMs);
-      const filteredSymptoms = entries.filter(e => e.type === 'Symptôme' && (now - e.timestamp) <= limitMs);
 
-      let pCount = 0, cCount = 0, vCount = 0;
+      // Compter la fréquence de chaque aliment
+      const freqMap = {};
+      let protCount = 0, carbCount = 0, vitCount = 0;
 
-      filteredMeals.forEach(m => {
-        const text = (m.desc || '').toLowerCase();
-        if (DICT.prot.some(k => text.includes(k))) pCount++;
-        if (DICT.carb.some(k => text.includes(k))) cCount++;
-        if (DICT.vit.some(k => text.includes(k))) vCount++;
+      filteredMeals.forEach(meal => {
+        const mealTags = meal.tags || [];
+        mealTags.forEach(t => {
+          freqMap[t] = (freqMap[t] || 0) + 1;
+
+          if (GROUPS.prot.some(k => t.includes(k))) protCount++;
+          if (GROUPS.carb.some(k => t.includes(k))) carbCount++;
+          if (GROUPS.vit.some(k => t.includes(k))) vitCount++;
+        });
       });
 
-      const totalMeals = filteredMeals.length;
-      const getPercent = (count) => totalMeals === 0 ? 0 : Math.min(100, Math.round((count / totalMeals) * 100));
+      // Afficher les aliments les plus fréquents sous forme de cartes
+      const grid = document.getElementById('freqGrid');
+      grid.innerHTML = '';
 
-      document.getElementById('protVal').innerText = `${pCount} repas (${getPercent(pCount)}%)`;
-      document.getElementById('carbVal').innerText = `${cCount} repas (${getPercent(cCount)}%)`;
-      document.getElementById('vitVal').innerText = `${vCount} repas (${getPercent(vCount)}%)`;
+      const sortedFoods = Object.entries(freqMap).sort((a, b) => b[1] - a[1]);
 
-      document.getElementById('protBar').style.width = `${getPercent(pCount)}%`;
-      document.getElementById('carbBar').style.width = `${getPercent(cCount)}%`;
-      document.getElementById('vitBar').style.width = `${getPercent(vCount)}%`;
-
-      const summaryDiv = document.getElementById('statSummary');
-      if (totalMeals === 0) {
-        summaryDiv.innerText = "Aucun repas enregistré sur cette période.";
+      if (sortedFoods.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; color: #64748b; font-size:13px;">Aucun aliment enregistré sur cette période.</div>';
       } else {
-        summaryDiv.innerHTML = `
-          <strong>Sur cette période :</strong> ${totalMeals} repas et ${filteredSymptoms.length} symptôme(s) relevé(s).<br>
-          <em>Note d'interprétation :</em> Répartition basée sur la détection des groupes d'aliments cités (hors pesée exacte). Une fréquence élevée de glucides ou protéines couplée à l'apparition de symptômes permet d'identifier les combinaisons critiques.
-        `;
+        sortedFoods.forEach(([food, count]) => {
+          const div = document.createElement('div');
+          div.className = 'freq-card';
+          div.innerHTML = `<div class="freq-name">${food}</div><div class="freq-count">${count} <span style="font-size:11px; font-weight:normal;">fois</span></div>`;
+          grid.appendChild(div);
+        });
       }
+
+      // Barres de répartition indicative
+      const totalGroups = protCount + carbCount + vitCount;
+      const getPct = (c) => totalGroups === 0 ? 0 : Math.round((c / totalGroups) * 100);
+
+      document.getElementById('protVal').innerText = `${protCount} (${getPct(protCount)}%)`;
+      document.getElementById('carbVal').innerText = `${carbCount} (${getPct(carbCount)}%)`;
+      document.getElementById('vitVal').innerText = `${vitCount} (${getPct(vitCount)}%)`;
+
+      document.getElementById('protBar').style.width = `${getPct(protCount)}%`;
+      document.getElementById('carbBar').style.width = `${getPct(carbCount)}%`;
+      document.getElementById('vitBar').style.width = `${getPct(vitCount)}%`;
     }
 
     /* ==========================================================
-       AFFICHAGE DU TABLEAU & RENDU
+       RENDU DU TABLEAU HISTORIQUE
        ========================================================== */
     async function refreshView() {
       const entries = await getAllEntriesFromDB();
@@ -466,6 +599,12 @@
         const tr = document.createElement('tr');
         const isMeal = item.type === 'Repas';
         const badge = `<span class="badge ${isMeal ? 'badge-meal' : 'badge-symptom'}">${item.type}</span>`;
+        
+        let detailsHtml = item.desc || '';
+        if (item.tags && item.tags.length > 0) {
+          detailsHtml += `<br><span style="font-size:11px; color:#4338ca;">🏷️ ${item.tags.join(', ')}</span>`;
+        }
+
         const extra = isMeal && item.photo 
           ? `<img src="${item.photo}" class="thumb" alt="plat">` 
           : (item.delay || '-');
@@ -473,55 +612,57 @@
         tr.innerHTML = `
           <td>${item.date}</td>
           <td>${badge}</td>
-          <td>${item.desc || '-'}</td>
+          <td>${detailsHtml}</td>
           <td>${extra}</td>
         `;
         tbody.appendChild(tr);
       });
 
-      computeStats();
+      computeDetailedStats();
     }
 
     /* ==========================================================
-       EXPORTATION ET PARTAGE NATIVE
+       EXPORTATION ET PARTAGE
        ========================================================== */
     async function exportData(format) {
       const entries = await getAllEntriesFromDB();
       if (entries.length === 0) {
-        alert("Aucune donnée disponible pour l'export.");
+        alert("Aucune donnée à exporter.");
         return;
       }
 
       let file, filename;
 
       if (format === 'csv') {
-        let csvContent = "\uFEFFDate;Type;Description;Délai symptôme\n";
+        let csvContent = "\uFEFFDate;Type;Description;Aliments Taggués;Délai symptôme\n";
         entries.forEach(e => {
           const cleanDesc = (e.desc || '').replace(/"/g, '""').replace(/(\r\n|\n|\r)/gm, ' ');
-          csvContent += `"${e.date}";"${e.type}";"${cleanDesc}";"${e.delay || ''}"\n`;
+          const tagsStr = (e.tags || []).join(', ');
+          csvContent += `"${e.date}";"${e.type}";"${cleanDesc}";"${tagsStr}";"${e.delay || ''}"\n`;
         });
         filename = `journal_diete_${Date.now()}.csv`;
         file = new File([csvContent], filename, { type: 'text/csv;charset=utf-8;' });
       } else {
-        let htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rapport Diète</title><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:8px;} img{max-width:120px;border-radius:6px;}</style></head><body><h2>Rapport Repas & Symptômes</h2><table><tr><th>Date</th><th>Type</th><th>Détails</th><th>Photo / Délai</th></tr>`;
+        let htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rapport</title><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:8px;} img{max-width:120px;border-radius:6px;}</style></head><body><h2>Journal Diète & Symptômes</h2><table><tr><th>Date</th><th>Type</th><th>Détails</th><th>Tags</th><th>Photo / Délai</th></tr>`;
         entries.forEach(e => {
           const photoOrDelay = e.photo ? `<img src="${e.photo}">` : (e.delay || '-');
-          htmlContent += `<tr><td>${e.date}</td><td>${e.type}</td><td>${e.desc}</td><td>${photoOrDelay}</td></tr>`;
+          const tags = (e.tags || []).join(', ');
+          htmlContent += `<tr><td>${e.date}</td><td>${e.type}</td><td>${e.desc}</td><td>${tags}</td><td>${photoOrDelay}</td></tr>`;
         });
         htmlContent += `</table></body></html>`;
-        filename = `rapport_diete_complet_${Date.now()}.html`;
+        filename = `rapport_diete_${Date.now()}.html`;
         file = new File([htmlContent], filename, { type: 'text/html;charset=utf-8;' });
       }
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({
-            title: 'Mon journal diète & symptômes',
-            text: 'Voici l\'historique exporté de mes repas et symptômes.',
+            title: 'Journal diète',
+            text: 'Mon historique alimentaire et symptômes.',
             files: [file]
           });
         } catch (err) {
-          if (err.name !== 'AbortError') alert("Erreur lors du partage : " + err.message);
+          if (err.name !== 'AbortError') alert("Erreur : " + err.message);
         }
       } else {
         const a = document.createElement('a');
@@ -533,14 +674,13 @@
     }
 
     async function clearAllData() {
-      if (confirm("Supprimer l'ensemble des données enregistrées ?")) {
+      if (confirm("Supprimer l'intégralité des données ?")) {
         const tx = db.transaction([STORE_NAME], 'readwrite');
         tx.objectStore(STORE_NAME).clear();
         tx.oncomplete = () => refreshView();
       }
     }
 
-    // Initialisation au chargement
     initDB().then(() => refreshView());
   </script>
 </body>
